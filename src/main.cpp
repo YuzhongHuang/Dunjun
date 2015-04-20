@@ -1,13 +1,18 @@
 #include <Dunjun/Common.h>
-#include <gl\glew.h>
+#include <Dunjun/shaderProgram.h>
+
+#include <gl/glew.h>
 #include <GLFW/glfw3.h>
 
+
 #include <iostream>
+#include <cmath>
+
 
 GLOBAL int g_windowWidth = 640;
 GLOBAL int g_windowHeight = 480;
 
-void glfwHints() 
+INTERNAL void glfwHints() 
 {
 	glfwWindowHint(GLFW_VERSION_MAJOR, 2);
 	glfwWindowHint(GLFW_VERSION_MINOR, 1);
@@ -15,6 +20,7 @@ void glfwHints()
 
 int main(int argc, char** argv) 
 {
+	//initialize all the settings and libs that we will use
 	if (!glewInit())
 	{
 		return EXIT_FAILURE;
@@ -40,10 +46,17 @@ int main(int argc, char** argv)
 
 	glewInit();
 
+	glEnable(GL_CULL_FACE);
+	glCullFace(GL_BACK);
+
+	//state the vertices of the triangle that we are going to draw 
+
 	float vertices[] = {
-		+0.0f, +0.5f,
-		-0.5f, -0.5f,
-		+0.5f, -0.5f,
+	//    x      y     r     g     b
+		+0.5f, +0.5f, 1.0f, 1.0f, 1.0f,  //Vertex 0
+		-0.5f, +0.5f, 0.0f, 0.0f, 1.0f,  //Vertex 1
+		+0.5f, -0.5f, 0.0f, 1.0f, 0.0f,  //Vertex 2
+		-0.5f, -0.5f, 1.0f, 0.0f, 0.0f,  //Vertex 3
 	};
 
 	GLuint vbo;
@@ -51,42 +64,14 @@ int main(int argc, char** argv)
 	glBindBuffer(GL_ARRAY_BUFFER, vbo);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
-	const char* vertexShaderText = {
-		"#version 120\n"
-		"\n"
-		"attribute vec2 position;"
-		"void main()"
-		"{"
-		"   gl_Position = vec4(position, 0.0, 1.0);"
-		"}"
-	};
+	Dunjun::ShaderProgram shaderProgram;
+	shaderProgram.attachShaderFromFile(Dunjun::ShaderType::Vertex, "data/shaders/default.vert.glsl");
+	shaderProgram.attachShaderFromFile(Dunjun::ShaderType::Fragment, "data/shaders/default.frag.glsl");
 
-	const char* fragmentShaderText = {
-		"#version 120\n"
-		"\n"
-		"void main()"
-		"{"
-		"   gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);"
-		"}"
-	};
-
-	GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
-	glShaderSource(vertexShader, 1, &vertexShaderText, nullptr);
-	glCompileShader(vertexShader);
-
-	GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-	glShaderSource(fragmentShader, 1, &fragmentShaderText, nullptr);
-	glCompileShader(fragmentShader);
-
-	GLuint shaderProgram = glCreateProgram();
-	glAttachShader(shaderProgram, vertexShader);
-	glAttachShader(shaderProgram, fragmentShader);
-
-	glBindAttribLocation(shaderProgram, 0, "position");
-
-	glLinkProgram(shaderProgram);
-
-	glUseProgram(shaderProgram);
+	shaderProgram.bindAttributeLocation(0, "vertPosition");
+	shaderProgram.bindAttributeLocation(1, "vertColor");
+	shaderProgram.link();
+	shaderProgram.use();
 
 	bool full_screen = false;
 	bool running = true;
@@ -97,13 +82,18 @@ int main(int argc, char** argv)
 
 		//Draw Things
 		{
+			float time = glfwGetTime();
+
 			glEnableVertexAttribArray(0);
+			glEnableVertexAttribArray(1);
 
-			glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, nullptr);
+			glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), 0);
+			glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (const GLvoid*)(2 * sizeof(float)));
 
-			glDrawArrays(GL_TRIANGLES, 0, 3);
+			glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
 			glDisableVertexAttribArray(0);
+			glDisableVertexAttribArray(1);
 		}
 
 		glfwSwapBuffers(window);
